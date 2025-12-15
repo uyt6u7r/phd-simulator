@@ -10,7 +10,8 @@ export default defineConfig(({ mode }) => {
     define: {
       // Polyfill process.env.API_KEY for the Gemini Service
       // Users should create a .env file with API_KEY=your_key
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
+      // Default to empty string to prevent crash on load, requests will fail gracefully
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || '')
     }
   }
 })
