@@ -1,10 +1,9 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { GameState, GamePhase, ResearchField, LogEntry, ActiveProject, Paper, GameAction, PlayerStats, SupervisorProfile, BackgroundOption, PhysiologicalStats, RandomEvent, ResearchIdea, Journal, SubmissionResult, ReviewType } from './types';
 import { INITIAL_GAME_STATE, COST, MAX_STATS, WIN_CONDITION_REPUTATION, WIN_CONDITION_PAPERS, BACKGROUND_POOL, SUPERVISOR_POOL, CONFIRMATION_TASK, YEAR_2_REVIEW_TASK, WEEKLY_LAB_COST } from './constants';
 import { generateResearchTopic, generatePeerReview, generateRandomEvent } from './services/geminiService';
 import { RANDOM_EVENT_POOL } from './events';
-import { JOURNALS } from './journals'; // Import central journal list
+import { JOURNALS } from './journals';
 import { StatsBar } from './components/StatsBar';
 import { ProjectCard } from './components/ProjectCard';
 import { MandatoryTaskCard } from './components/MandatoryTaskCard';
@@ -22,10 +21,9 @@ import {
   GraduationCap, RotateCcw, Award, Frown, CalendarClock, ArrowRight, 
   User, UserCheck, Quote, Shuffle, DoorOpen, Wallet, TrendingUp, 
   HeartCrack, UserX, Brain, Zap, Activity, Smile, Heart, Sparkles, 
-  BookOpen, Star, Banknote 
+  BookOpen, Star, Banknote, Briefcase
 } from 'lucide-react';
 
-// --- UI HELPERS FOR SUPERVISOR SELECTION ---
 const getFundingDesc = (funding: number) => {
     if (funding < 50000) return "Tight Budget";
     if (funding < 100000) return "Stable";
@@ -42,12 +40,7 @@ const getReputationDesc = (rep: number) => {
     return "Legendary";
 };
 
-// --- LOGIC HELPERS ---
-
-// Calculate energy recovery based on physiological stats
-// Pure function: Calculates recovery based on the EXACT stats provided (Post-Decay)
-const calculateEnergyRecovery = (stats: PlayerStats, maxStats: PlayerStats) => {
-    // Current Stats (Should already include weekly decay if called from nextWeek, or simulated decay if called from UI)
+const calculateEnergyRecovery = (stats: PlayerStats, maxStats: PlayerStats): number => {
     const health = stats.physiological.health;
     const sanity = stats.physiological.sanity;
     const stress = stats.physiological.stress;
@@ -76,30 +69,23 @@ const calculateEnergyRecovery = (stats: PlayerStats, maxStats: PlayerStats) => {
     return Math.round(maxStats.energy * recoveryPct);
 };
 
-// ---------------------------------------------
-
 export default function App() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
   
-  // Setup State
   const [setupStep, setSetupStep] = useState(1);
   const [offeredBackgrounds, setOfferedBackgrounds] = useState<BackgroundOption[]>([]);
   const [offeredSupervisors, setOfferedSuperors] = useState<SupervisorProfile[]>([]);
   const [selectedBackground, setSelectedBackground] = useState<BackgroundOption | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<SupervisorProfile | null>(null);
   
-  // Research State
   const [selectedIdea, setSelectedIdea] = useState<ResearchIdea | null>(null);
   const [researchCompleteData, setResearchCompleteData] = useState<{ quality: number, journals: Journal[] } | null>(null);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
 
-  // Extra actions derived from bg + supervisor
   const [combinedExtraActions, setCombinedExtraActions] = useState<GameAction[]>([]);
   
-  // Pending Event State
   const [pendingRandomEvent, setPendingRandomEvent] = useState<RandomEvent | null>(null);
 
-  // Initialize random options
   useEffect(() => {
     shuffleOptions();
   }, []);
@@ -112,7 +98,6 @@ export default function App() {
     setOfferedSuperors(sup.slice(0, 3));
   };
 
-  // Helper to add logs
   const addLog = (message: string, type: LogEntry['type'] = 'info') => {
     setGameState(prev => ({
       ...prev,
@@ -125,7 +110,6 @@ export default function App() {
     }));
   };
 
-  // Helper to check game over conditions
   const checkGameOver = useCallback((currentStats: PlayerStats, papers: Paper[], maxStats: PlayerStats) => {
     // Loss conditions
     if (currentStats.physiological.stress >= maxStats.physiological.stress) return GamePhase.GAMEOVER_BURNOUT;
@@ -145,7 +129,6 @@ export default function App() {
     return GamePhase.PLAYING;
   }, []);
 
-  // Helper to update categories recursively with dynamic clamping
   const updateStatsCategories = (currentStats: PlayerStats, data: any, maxStats: PlayerStats) => {
         if (!data) return;
         const update = (category: keyof PlayerStats, modifier: any) => {
@@ -174,7 +157,6 @@ export default function App() {
         update('career', data.career);
   };
 
-  // Handler for advancing to the next week
   const handleNextWeek = async () => {
     // 1. DETERMINE EVENT TYPE (Forced vs Random)
     // We do this BEFORE setGameState so we can trigger the popup correctly
@@ -708,6 +690,20 @@ export default function App() {
         }
     }
 
+    // SPECIAL: WEEKEND_OVERTIME (International Student)
+    if (action.id === 'WEEKEND_OVERTIME') {
+        if (!gameState.activeProject) {
+            addLog("No active project to work overtime on.", 'warning');
+            return;
+        }
+    }
+
+    // SPECIAL: TAKE_LOAN (International Student Restriction)
+    if (action.id === 'TAKE_LOAN' && gameState.backgroundId === 'INTERNATIONAL') {
+        addLog("Visa restrictions prevent you from taking local loans.", 'danger');
+        return;
+    }
+
     setGameState(prev => {
         let { cost, effect } = action;
         const newStats = JSON.parse(JSON.stringify(prev.stats)) as PlayerStats;
@@ -876,6 +872,31 @@ export default function App() {
             }
         });
         addLog("Fabricated results integrated. Progress +10%. You feel your soul withering.", 'danger');
+    }
+
+    if (action.id === 'WEEKEND_OVERTIME') {
+        setGameState(prev => {
+            if(!prev.activeProject) return prev;
+            
+            const tm = prev.stats.skills.timeManagement;
+            const exp = prev.stats.skills.experiment;
+            
+            // Base 5-15%
+            const base = 5 + Math.random() * 10;
+            // Boost: up to 1.5x if stats are 50+ (Max boost at 100 each = 2x)
+            const multiplier = 1 + ((tm + exp) / 200); 
+            
+            const progressGain = base * multiplier;
+            
+            const target = prev.activeProject.status === 'REVISION' ? (prev.activeProject.revisionRequirement || 100) : 100;
+            const newProgress = Math.min(target, prev.activeProject.progress + progressGain);
+            
+            return {
+                ...prev,
+                activeProject: { ...prev.activeProject, progress: newProgress }
+            }
+        });
+        addLog("Weekend Overtime: Significant progress made! (High Stress/Sanity penalty applied)", 'warning');
     }
 
     const IDEA_TRIGGERS: Record<string, number> = {
@@ -1600,7 +1621,7 @@ export default function App() {
                                                             (val as number) > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'
                                                         }`}>
                                                             {key === 'stress' ? (val as number) > 0 ? <TrendingUp size={12}/> : <Smile size={12}/> : <Heart size={12}/>}
-                                                            {key} {(val as number) > 0 ? '+' : ''}{val}
+                                                            {key} {(val as number) > 0 ? '+' : ''}{(val as number)}
                                                         </div>
                                                     ))}
 
@@ -2134,6 +2155,7 @@ export default function App() {
               extraActions={combinedExtraActions}
               supervisorState={supervisorState}
               supervisorId={gameState.supervisorId} // PASS SUPERVISOR ID FOR VISUAL LOGIC
+              backgroundId={gameState.backgroundId} // New Prop
               playerDebt={gameState.playerDebt} // Pass debt state
               loanDeadline={gameState.loanDeadline}
               turn={gameState.turn}
