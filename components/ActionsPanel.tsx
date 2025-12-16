@@ -15,7 +15,6 @@ interface ActionsPanelProps {
   extraActions?: GameAction[];
   supervisorState?: SupervisorState;
   supervisorId?: string; // New Prop to identify Kensington
-  backgroundId?: string; // New Prop for background specific logic
   playerDebt: number; // New Prop to handle loan state
   loanDeadline: number | null; // New Prop
   turn: number; // New Prop
@@ -45,9 +44,7 @@ const ICONS: Record<string, any> = {
   COOK_HOME: Utensils,
   PROTEST: MonitorPlay,
   POWER_NAP: Home,
-  DATA_MANIPULATION: FileWarning,
-  WEEKEND_OVERTIME: Clock,
-  CALL_HOME: Phone
+  DATA_MANIPULATION: FileWarning
 };
 
 // Fallback icon helper
@@ -69,7 +66,6 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({
   extraActions = [],
   supervisorState,
   supervisorId,
-  backgroundId,
   playerDebt,
   loanDeadline,
   turn
@@ -121,12 +117,9 @@ export const ActionsPanel: React.FC<ActionsPanelProps> = ({
         }
     }
 
-    // Specific logic for TAKE_LOAN (Swap to Repay or Disable for International)
+    // Specific logic for TAKE_LOAN (Swap to Repay)
     if (action.id === 'TAKE_LOAN') {
-        if (backgroundId === 'INTERNATIONAL') {
-            isDisabled = true;
-            disableReason = "Visa Restrictions";
-        } else if (playerDebt > 0) {
+        if (playerDebt > 0) {
             label = `Repay Loan ($${playerDebt})`;
             description = `Pay off debt completely. Interest accruing weekly.`;
             cost = { ...cost, funds: playerDebt, physiological: { stress: 0 } } as any; // Remove taking cost
