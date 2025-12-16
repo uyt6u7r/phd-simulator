@@ -11,30 +11,28 @@
       body { font-family: 'Inter', sans-serif; }
       h1, h2, h3, h4, h5, h6, .serif { font-family: 'Merriweather', serif; }
       
+      /* Modal Animations */
       .modal-backdrop {
-        position: fixed; inset: 0; background: rgba(15, 23, 42, 0.9);
+        position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85);
         backdrop-filter: blur(4px); z-index: 50;
         display: flex; align-items: center; justify-content: center;
-        opacity: 0; pointer-events: none; transition: opacity 0.2s ease-out;
+        opacity: 0; pointer-events: none; transition: opacity 0.3s ease-out;
       }
       .modal-backdrop.active { opacity: 1; pointer-events: auto; }
       
-      /* Scrollbar */
+      .modal-content {
+        transform: translateY(20px) scale(0.95); transition: transform 0.3s ease-out;
+      }
+      .modal-backdrop.active .modal-content {
+        transform: translateY(0) scale(1);
+      }
+
+      /* Custom Scrollbar */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: #f1f5f9; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
-    <script>
-      // Shim process.env for browser compatibility
-      if (typeof process === 'undefined') {
-        window.process = {
-          env: {
-            API_KEY: '' // User can set this in console or code
-          }
-        };
-      }
-    </script>
     <script type="importmap">
 {
   "imports": {
@@ -46,9 +44,11 @@
 }
 </script>
   </head>
-  <body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
-    <div id="app" class="min-h-screen flex flex-col"></div>
+  <body class="bg-slate-100 text-slate-800 antialiased min-h-screen selection:bg-indigo-100 selection:text-indigo-800">
+    <div id="app" class="min-h-screen"></div>
     <div id="modal-container" class="modal-backdrop"></div>
+    
+    <!-- Load Main Module -->
     <script type="module" src="./main.js"></script>
   </body>
 </html>

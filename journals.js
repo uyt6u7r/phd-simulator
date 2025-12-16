@@ -8,6 +8,7 @@ export const JOURNALS = [
         acceptQuality: 98,
         specificRequirements: { novelty: 90, attraction: 80 },
         reputationReward: 150,
+        citationFactor: 5.0,
         costToSubmit: 0
     },
     {
@@ -19,6 +20,7 @@ export const JOURNALS = [
         acceptQuality: 75,
         specificRequirements: { feasibility: 60 },
         reputationReward: 30,
+        citationFactor: 1.0,
         costToSubmit: 0
     },
     {
@@ -30,6 +32,7 @@ export const JOURNALS = [
         acceptQuality: 5,
         specificRequirements: {},
         reputationReward: -10,
+        citationFactor: 0.0,
         costToSubmit: 500
     }
 ];
